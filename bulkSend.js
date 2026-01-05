@@ -7,8 +7,11 @@ require("dotenv").config();
 // ------------------------------
 // Send WhatsApp Template Message
 // ------------------------------
-async function sendWhatsAppTemplate(to, name) {
+async function sendWhatsAppTemplate(to) {
   try {
+    // The video must be hosted on a public URL and be in MP4 format.
+    const videoUrl = "https://art-cairo-2.onrender.com/18925.mp4";
+
     await axios.post(
       `https://graph.facebook.com/v21.0/${process.env.PHONE_NUMBER_ID}/messages`,
       {
@@ -16,29 +19,21 @@ async function sendWhatsAppTemplate(to, name) {
         to: to,
         type: "template",
         template: {
-          name: "talabat_vip_inv", // ✅ your approved template name
+          name: "video_template", // ✅ Your new, approved video template name
           language: { code: "en" },
           components: [
             {
               type: "header",
               parameters: [
                 {
-                  type: "image",
-                  image: {
-                    link: "https://raw.githubusercontent.com/Sirkil/talabat_partners_event/main/E-Invittation_V2%20(AR%26EN)%20.jpg",
+                  type: "video",
+                  video: {
+                    link: videoUrl, // ✅ Link to your publicly hosted video
                   },
                 },
               ],
             },
-            {
-              type: "body",
-              parameters: [
-                {
-                  type: "text",
-                  text: name, // ✅ inject first_name into {{1}}
-                },
-              ],
-            },
+            // No body component is needed if the body has no variables
           ],
         },
       },
@@ -49,15 +44,14 @@ async function sendWhatsAppTemplate(to, name) {
         },
       }
     );
-    console.log(`✅ Template sent to ${to} (${name})`);
+    console.log(`✅ Video template sent to ${to}`);
   } catch (error) {
     console.error(
-      `❌ Failed to send template to ${to}:`,
+      `❌ Failed to send video template to ${to}:`,
       error.response?.data || error.message
     );
   }
 }
-
 // ------------------------------
 // Bulk sender
 // ------------------------------
@@ -67,13 +61,14 @@ function sendBulkMessages() {
   fs.createReadStream(csvFile)
     .pipe(csv())
     .on("data", async (row) => {
-      const phone = row.number.trim();
-      const name = row.first_name?.trim();
-
-      console.log(`📤 Sending template to ${phone} (${name})`);
-
-      // ✅ Pass both phone + name
-      await sendWhatsAppTemplate(phone, name);
+      // Correctly read the phone number from the 'number' column
+      const phone = row.number?.trim();
+      
+      if (phone) {
+        console.log(`📤 Sending template to ${phone}`);
+        // Only pass the phone number, as required
+        await sendWhatsAppTemplate(phone);
+      }
     })
     .on("end", () => {
       console.log("✅ All messages processed");
